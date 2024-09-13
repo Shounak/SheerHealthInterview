@@ -73,4 +73,6 @@ dependencies {
     implementation(libs.kotlinx.serialization)
     implementation(libs.viewmodel.compose)
     implementation(libs.runtime.compose)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.navigation)
 }

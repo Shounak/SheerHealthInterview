@@ -1,13 +1,18 @@
 package com.example.sheerhealthinterview.ui.cases
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.ViewModelProvider
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sheerhealthinterview.network.Case
 import com.example.sheerhealthinterview.ui.ErrorState
@@ -36,10 +41,27 @@ fun CasesScreen(
 }
 
 @Composable
-fun CasesList(casesList: List<Case>, modifier: Modifier = Modifier) {
-    Column(modifier =  modifier) {
-        for (case in casesList) {
-            Text(case.title)
+private fun CasesList(casesList: List<Case>, modifier: Modifier = Modifier) {
+    LazyColumn(modifier =  modifier.fillMaxSize()) {
+        items(casesList.size) { index ->
+            CaseCard(casesList[index], {  })
         }
+    }
+}
+
+@Composable
+private fun CaseCard(case: Case, clickAction: () -> Unit, modifier: Modifier = Modifier) {
+    Card(modifier = modifier
+        .fillMaxWidth()
+        .padding(10.dp)
+        .clickable {
+            clickAction()
+        }) {
+        Row {
+
+        }
+
+        Text(case.title)
+        Text(case.status.value)
     }
 }

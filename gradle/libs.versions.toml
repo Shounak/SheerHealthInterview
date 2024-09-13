@@ -13,6 +13,7 @@ serializationConverter = "1.0.0"
 okhttp = "4.12.0"
 serialization = "1.6.3"
 runtimeCompose = "2.8.5"
+navigation = "2.8.0"
 
 
 [libraries]
@@ -36,6 +37,8 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "runtimeCompose" }
 runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "runtimeCompose" }
+androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+navigation = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

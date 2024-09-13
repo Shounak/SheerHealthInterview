@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">SheerHealthInterview</string>
+    <string name="go_back">Navigate Back</string>
 </resources>

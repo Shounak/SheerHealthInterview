@@ -17,6 +17,7 @@ object SheerAPI {
         return OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor())
             .readTimeout(45, TimeUnit.SECONDS)
+            .writeTimeout(45, TimeUnit.SECONDS)
             .build()
     }
 
