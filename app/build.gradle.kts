@@ -71,6 +71,6 @@ dependencies {
     implementation(libs.retrofit.serialization.converter)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization)
-
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
+    implementation(libs.viewmodel.compose)
+    implementation(libs.runtime.compose)
 }
