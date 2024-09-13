@@ -20,6 +20,7 @@ import com.example.sheerhealthinterview.ui.LoadingState
 
 @Composable
 fun CasesScreen(
+    caseClickedAction: (String) -> Unit,
     modifier: Modifier = Modifier,
     casesViewModel: CasesViewModel = viewModel()
 ) {
@@ -35,32 +36,28 @@ fun CasesScreen(
         }
 
         is CasesUiState.Success -> {
-            CasesList((casesUiState as CasesUiState.Success).cases)
+            CasesList((casesUiState as CasesUiState.Success).cases, caseClickedAction)
         }
     }
 }
 
 @Composable
-private fun CasesList(casesList: List<Case>, modifier: Modifier = Modifier) {
+private fun CasesList(casesList: List<Case>, clickAction: (String) -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(modifier =  modifier.fillMaxSize()) {
         items(casesList.size) { index ->
-            CaseCard(casesList[index], {  })
+            CaseCard(casesList[index], clickAction)
         }
     }
 }
 
 @Composable
-private fun CaseCard(case: Case, clickAction: () -> Unit, modifier: Modifier = Modifier) {
+private fun CaseCard(case: Case, clickAction: (String) -> Unit, modifier: Modifier = Modifier) {
     Card(modifier = modifier
         .fillMaxWidth()
         .padding(10.dp)
         .clickable {
-            clickAction()
+            clickAction(case.caseId)
         }) {
-        Row {
-
-        }
-
         Text(case.title)
         Text(case.status.value)
     }

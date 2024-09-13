@@ -23,6 +23,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.sheerhealthinterview.ui.cases.CasesScreen
+import com.example.sheerhealthinterview.ui.details.DetailsScreen
 
 enum class AppScreen {
     Cases, Details
@@ -71,7 +72,16 @@ fun AppUI(modifier: Modifier = Modifier) {
                 .padding(innerPadding)
         ) {
             composable(route = AppScreen.Cases.name) {
-                CasesScreen()
+                CasesScreen({ caseId: String -> navController.navigate("${AppScreen.Details.name}/$caseId") })
+            }
+
+            composable(
+                route = "${AppScreen.Details.name}/{caseId}",
+                arguments = listOf(navArgument("caseId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                backStackEntry.arguments?.getString("caseId")?.let {
+                    DetailsScreen(it)
+                }
             }
         }
     }

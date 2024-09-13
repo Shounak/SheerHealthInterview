@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.http.GET
+import retrofit2.http.Path
 import java.util.concurrent.TimeUnit
 
 object SheerAPI {
@@ -44,4 +45,7 @@ private class AuthInterceptor : Interceptor {
 interface SheerApiService {
     @GET("case")
     suspend fun getCases(): retrofit2.Response<List<Case>>
+
+    @GET("case/{caseId}")
+    suspend fun getDetails(@Path("caseId") caseId: String): retrofit2.Response<CaseDetails>
 }
