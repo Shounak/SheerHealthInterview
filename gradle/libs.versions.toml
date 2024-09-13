@@ -14,6 +14,7 @@ okhttp = "4.12.0"
 serialization = "1.6.3"
 runtimeCompose = "2.8.5"
 navigation = "2.8.0"
+cardview = "1.0.0"
 
 
 [libraries]
@@ -39,6 +40,7 @@ viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-
 runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "runtimeCompose" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 navigation = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

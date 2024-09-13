@@ -75,4 +75,5 @@ dependencies {
     implementation(libs.runtime.compose)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.navigation)
+    implementation(libs.cardview)
 }

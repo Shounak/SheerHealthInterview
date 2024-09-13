@@ -7,6 +7,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import retrofit2.Retrofit
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Path
 import java.util.concurrent.TimeUnit
@@ -48,4 +49,7 @@ interface SheerApiService {
 
     @GET("case/{caseId}")
     suspend fun getDetails(@Path("caseId") caseId: String): retrofit2.Response<CaseDetails>
+
+    @DELETE("case/{caseId}/detail/{detailId}")
+    suspend fun deleteDetail(@Path("caseId") caseId: String, @Path("detailId") detailId: String): retrofit2.Response<String>
 }

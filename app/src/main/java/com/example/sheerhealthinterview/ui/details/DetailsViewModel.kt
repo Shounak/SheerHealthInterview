@@ -57,6 +57,23 @@ class DetailsViewModel(caseId: String) : ViewModel() {
             _uiState.update { newUiState }
         }
     }
+
+    fun deleteMessage(caseId: String, detailId: String) {
+        viewModelScope.launch {
+            try {
+                val response = SheerAPI.retrofitService.deleteDetail(caseId, detailId)
+                if (response.isSuccessful) {
+                    getDetails(caseId)
+                } else {
+                    val x = 0
+                }
+            } catch (exception: IOException) {
+                val x = 0
+            } catch (exception: HttpException) {
+                val x = 0
+            }
+        }
+    }
 }
 
 

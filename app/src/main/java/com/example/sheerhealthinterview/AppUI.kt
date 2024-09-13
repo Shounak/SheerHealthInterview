@@ -144,4 +144,4 @@ fun AppUI(modifier: Modifier = Modifier) {
     }
 }
 
-private val ANIMATION_DURATION = 500
+private const val ANIMATION_DURATION = 500

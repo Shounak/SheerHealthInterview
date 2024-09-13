@@ -1,4 +1,11 @@
 <resources>
     <string name="app_name">SheerHealthInterview</string>
     <string name="go_back">Navigate Back</string>
+    <string name="text_message">Text Message</string>
+    <string name="go_icon">Go icon</string>
+    <string name="send_message">Send Message</string>
+    <string name="delete_message">Delete Message</string>
+    <string name="confirm">Confirm</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="delete_message_confirm">Delete Message?</string>
 </resources>
