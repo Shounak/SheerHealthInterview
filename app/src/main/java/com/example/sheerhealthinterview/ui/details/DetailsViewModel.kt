@@ -3,7 +3,6 @@ package com.example.sheerhealthinterview.ui.details
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.sheerhealthinterview.network.Case
 import com.example.sheerhealthinterview.network.CaseDetails
 import com.example.sheerhealthinterview.network.SheerAPI
 import kotlinx.coroutines.flow.MutableStateFlow

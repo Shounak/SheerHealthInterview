@@ -1,5 +1,11 @@
 package com.example.sheerhealthinterview
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -25,6 +31,7 @@ import androidx.navigation.navArgument
 import com.example.sheerhealthinterview.ui.cases.CasesScreen
 import com.example.sheerhealthinterview.ui.details.DetailsScreen
 
+
 enum class AppScreen {
     Cases, Details
 }
@@ -46,7 +53,8 @@ fun TopBar(
             if (canNavigateBack) {
                 IconButton(onClick = navigateUp) {
                     Icon(
-                        imageVector = Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.go_back)
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.go_back)
                     )
                 }
             }
@@ -71,13 +79,62 @@ fun AppUI(modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            composable(route = AppScreen.Cases.name) {
+            composable(route = AppScreen.Cases.name,
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(ANIMATION_DURATION)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(ANIMATION_DURATION)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(ANIMATION_DURATION)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(ANIMATION_DURATION)
+                    )
+                }
+            ) {
                 CasesScreen({ caseId: String -> navController.navigate("${AppScreen.Details.name}/$caseId") })
             }
 
             composable(
                 route = "${AppScreen.Details.name}/{caseId}",
-                arguments = listOf(navArgument("caseId") { type = NavType.StringType })
+                arguments = listOf(navArgument("caseId") { type = NavType.StringType }),
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(ANIMATION_DURATION)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(ANIMATION_DURATION)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(ANIMATION_DURATION)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(ANIMATION_DURATION)
+                    )
+                }
             ) { backStackEntry ->
                 backStackEntry.arguments?.getString("caseId")?.let {
                     DetailsScreen(it)
@@ -86,3 +143,5 @@ fun AppUI(modifier: Modifier = Modifier) {
         }
     }
 }
+
+private val ANIMATION_DURATION = 500

@@ -16,9 +16,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             SheerHealthInterviewTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    AppUI(modifier = Modifier.padding(innerPadding))
-                }
+                AppUI()
             }
         }
     }
