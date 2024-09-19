@@ -1,9 +1,14 @@
 package com.example.sheerhealthinterview.ui.details
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.sheerhealthinterview.R
 import com.example.sheerhealthinterview.network.CaseDetails
+import com.example.sheerhealthinterview.network.ChatDirection
+import com.example.sheerhealthinterview.network.Detail
+import com.example.sheerhealthinterview.network.NewDetail
 import com.example.sheerhealthinterview.network.SheerAPI
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,9 +19,15 @@ import retrofit2.HttpException
 import java.io.IOException
 
 sealed interface DetailsUiState {
-    data class Success(val details: CaseDetails): DetailsUiState
-    data object Loading: DetailsUiState
-    data object Error: DetailsUiState
+    data class Success(val details: MutableList<Detail>) : DetailsUiState
+    data object Loading : DetailsUiState
+    data object Error : DetailsUiState
+}
+
+sealed interface DetailsActionState {
+    data class Success(val scrollToBottom: Boolean) : DetailsActionState
+    data object Loading : DetailsActionState
+    data class Error(@StringRes val errorMessage: Int) : DetailsActionState
 }
 
 class DetailsViewModelFactory(private val caseId: String) : ViewModelProvider.Factory {
@@ -28,9 +39,13 @@ class DetailsViewModelFactory(private val caseId: String) : ViewModelProvider.Fa
     }
 }
 
-class DetailsViewModel(caseId: String) : ViewModel() {
+class DetailsViewModel(caseId: String, ) : ViewModel() {
     private val _uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
+
+    private val _actionState =
+        MutableStateFlow<DetailsActionState>(DetailsActionState.Success(false))
+    val actionState: StateFlow<DetailsActionState> = _actionState.asStateFlow()
 
     init {
         getDetails(caseId)
@@ -44,7 +59,7 @@ class DetailsViewModel(caseId: String) : ViewModel() {
                 val response = SheerAPI.retrofitService.getDetails(caseId)
                 val responseBody = response.body()
                 if (response.isSuccessful && responseBody != null) {
-                    DetailsUiState.Success(responseBody)
+                    DetailsUiState.Success(responseBody.details)
                 } else {
                     DetailsUiState.Error
                 }
@@ -59,19 +74,60 @@ class DetailsViewModel(caseId: String) : ViewModel() {
     }
 
     fun deleteMessage(caseId: String, detailId: String) {
+        _actionState.update { DetailsActionState.Loading }
+
         viewModelScope.launch {
-            try {
+            val newActionState = try {
                 val response = SheerAPI.retrofitService.deleteDetail(caseId, detailId)
                 if (response.isSuccessful) {
-                    getDetails(caseId)
+                    if (uiState.value is DetailsUiState.Success) {
+                        val currentMessagesList = (uiState.value as DetailsUiState.Success).details
+                        currentMessagesList.removeIf {
+                            it.detailId == detailId
+                        }
+                        _uiState.update { DetailsUiState.Success(currentMessagesList) }
+                    }
+                    DetailsActionState.Success(false)
                 } else {
-                    val x = 0
+                    DetailsActionState.Error(R.string.delete_message_error)
                 }
             } catch (exception: IOException) {
-                val x = 0
+                DetailsActionState.Error(R.string.delete_message_error)
             } catch (exception: HttpException) {
-                val x = 0
+                DetailsActionState.Error(R.string.delete_message_error)
             }
+
+            _actionState.update { newActionState }
+        }
+    }
+
+    fun sendMessage(textMessage: String, caseId: String) {
+        _actionState.update { DetailsActionState.Loading }
+
+        viewModelScope.launch {
+            val newActionState = try {
+                val response = SheerAPI.retrofitService.createDetail(
+                    caseId,
+                    NewDetail(textMessage, ChatDirection.USER)
+                )
+                if (response.isSuccessful) {
+                    val responseBody = response.body()
+                    if (uiState.value is DetailsUiState.Success && responseBody != null) {
+                        val currentMessagesList = (uiState.value as DetailsUiState.Success).details
+                        currentMessagesList.add(responseBody)
+                        _uiState.update { DetailsUiState.Success(currentMessagesList) }
+                    }
+                    DetailsActionState.Success(true)
+                } else {
+                    DetailsActionState.Error(R.string.create_message_error)
+                }
+            } catch (exception: IOException) {
+                DetailsActionState.Error(R.string.create_message_error)
+            } catch (exception: HttpException) {
+                DetailsActionState.Error(R.string.create_message_error)
+            }
+
+            _actionState.update { newActionState }
         }
     }
 }

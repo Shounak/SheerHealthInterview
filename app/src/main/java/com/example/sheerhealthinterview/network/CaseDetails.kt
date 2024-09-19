@@ -9,7 +9,7 @@ data class CaseDetails (
     val caseId: String,
     val timestamp: String,
     val status: CaseStatus,
-    val details: List<Detail>
+    val details: MutableList<Detail>
 )
 
 @Serializable
@@ -18,6 +18,12 @@ data class Detail (
     val timestamp: String,
     val direction: ChatDirection,
     val message: String,
+)
+
+@Serializable
+data class NewDetail (
+    val message: String,
+    val direction: ChatDirection
 )
 
 @Serializable

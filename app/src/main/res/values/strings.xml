@@ -8,4 +8,8 @@
     <string name="confirm">Confirm</string>
     <string name="dismiss">Dismiss</string>
     <string name="delete_message_confirm">Delete Message?</string>
+    <string name="delete_message_error">Error deleting message</string>
+    <string name="create_message_error">Error sending message</string>
+    <string name="retry">Retry</string>
+    <string name="create_case">Create case</string>
 </resources>

@@ -1,9 +1,12 @@
 package com.example.sheerhealthinterview.ui.details
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -21,7 +24,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
@@ -33,9 +38,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -55,13 +63,16 @@ import com.example.sheerhealthinterview.R
 import com.example.sheerhealthinterview.network.CaseDetails
 import com.example.sheerhealthinterview.network.ChatDirection
 import com.example.sheerhealthinterview.network.Detail
+import com.example.sheerhealthinterview.ui.ActionLoadingState
 import com.example.sheerhealthinterview.ui.ConfirmDeleteDialog
 import com.example.sheerhealthinterview.ui.ErrorState
 import com.example.sheerhealthinterview.ui.LoadingState
+import kotlinx.coroutines.launch
 
 @Composable
 fun DetailsScreen(
     caseId: String,
+    errorAction: suspend (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
@@ -73,6 +84,9 @@ fun DetailsScreen(
     ).get(DetailsViewModel::class.java)
 
     val detailsUiState by detailsViewModel.uiState.collectAsStateWithLifecycle()
+    val detailsActionState by detailsViewModel.actionState.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
     var detailIdToBeDeleted by remember { mutableStateOf("") }
 
     when (detailsUiState) {
@@ -89,8 +103,37 @@ fun DetailsScreen(
                 (detailsUiState as DetailsUiState.Success).details,
                 { detailId ->
                     detailIdToBeDeleted = detailId
-                }
+                },
+                { textMessage ->
+                    detailsViewModel.sendMessage(textMessage, caseId)
+                },
+                listState
             )
+        }
+    }
+
+    when (detailsActionState) {
+        is DetailsActionState.Error -> {
+            val errorMessage = (detailsActionState as DetailsActionState.Error).errorMessage
+            LaunchedEffect(Unit) {
+                coroutineScope.launch {
+                    errorAction(errorMessage)
+                }
+            }
+        }
+
+        is DetailsActionState.Success -> {
+            if ((detailsActionState as DetailsActionState.Success).scrollToBottom) {
+                LaunchedEffect(Unit) {
+                    coroutineScope.launch {
+                        listState.scrollToItem(0)
+                    }
+                }
+            }
+        }
+
+        DetailsActionState.Loading -> {
+            ActionLoadingState()
         }
     }
 
@@ -108,8 +151,10 @@ fun DetailsScreen(
 
 @Composable
 private fun CaseDetails(
-    caseDetails: CaseDetails,
+    caseDetails: List<Detail>,
     deleteAction: (String) -> Unit,
+    sendAction: (String) -> Unit,
+    listState: LazyListState,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -123,22 +168,24 @@ private fun CaseDetails(
                 Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(),
-                reverseLayout = true
+                reverseLayout = true,
+                state = listState
             ) {
-                items(caseDetails.details.size) { index ->
+                items(caseDetails.size) { index ->
                     ChatCard(
-                        caseDetails.details[index],
+                        caseDetails[caseDetails.size - 1 - index], // render items in reverse order (latest at bottom)
                         deleteAction,
-                        Modifier.padding(top = 20.dp, start = 10.dp, end = 10.dp)
+                        Modifier.padding(10.dp)
                     )
                 }
             }
         }
 
-        ComposeMessageBar()
+        ComposeMessageBar(sendAction)
     }
 }
 
+@SuppressLint("InflateParams")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChatCard(chat: Detail, deleteAction: (String) -> Unit, modifier: Modifier = Modifier) {
@@ -155,6 +202,14 @@ private fun ChatCard(chat: Detail, deleteAction: (String) -> Unit, modifier: Mod
                     textView.text = chat.message
 
                     view // return the view
+                },
+                update = { view ->
+                    val textView = view.findViewById<TextView>(R.id.message_text)
+                    textView.text = chat.message
+                },
+                onReset = { view ->
+                    val textView = view.findViewById<TextView>(R.id.message_text)
+                    textView.text = null
                 },
                 modifier = modifier
                     .padding(end = 50.dp)
@@ -181,6 +236,14 @@ private fun ChatCard(chat: Detail, deleteAction: (String) -> Unit, modifier: Mod
 
                     view // return the view
                 },
+                update = { view ->
+                    val textView = view.findViewById<TextView>(R.id.message_text)
+                    textView.text = chat.message
+                },
+                onReset = { view ->
+                    val textView = view.findViewById<TextView>(R.id.message_text)
+                    textView.text = null
+                },
                 modifier = modifier
                     .padding(start = 50.dp)
                     .fillMaxWidth()
@@ -191,11 +254,11 @@ private fun ChatCard(chat: Detail, deleteAction: (String) -> Unit, modifier: Mod
 }
 
 @Composable
-private fun ComposeMessageBar(modifier: Modifier = Modifier) {
+private fun ComposeMessageBar(sendAction: (String) -> Unit, modifier: Modifier = Modifier) {
     var messageText by rememberSaveable { mutableStateOf("") }
 
     Row(
-        modifier = modifier.padding(top = 20.dp),
+        modifier = modifier, //.padding(top = 20.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         Spacer(modifier = Modifier.width(5.dp))
@@ -234,7 +297,8 @@ private fun ComposeMessageBar(modifier: Modifier = Modifier) {
 
             IconButton(
                 onClick = {
-                    // send message and refresh screen
+                    sendAction(messageText)
+                    messageText = ""
                 },
             ) {
                 Icon(

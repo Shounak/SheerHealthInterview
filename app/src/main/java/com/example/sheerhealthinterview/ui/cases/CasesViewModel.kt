@@ -1,9 +1,15 @@
 package com.example.sheerhealthinterview.ui.cases
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.sheerhealthinterview.R
 import com.example.sheerhealthinterview.network.Case
+import com.example.sheerhealthinterview.network.ChatDirection
+import com.example.sheerhealthinterview.network.NewDetail
 import com.example.sheerhealthinterview.network.SheerAPI
+import com.example.sheerhealthinterview.ui.details.DetailsActionState
+import com.example.sheerhealthinterview.ui.details.DetailsUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,9 +24,19 @@ sealed interface CasesUiState {
     data object Error: CasesUiState
 }
 
+sealed interface CasesActionState {
+    data class Success(val scrollToBottom: Boolean) : CasesActionState
+    data object Loading : CasesActionState
+    data class Error(@StringRes val errorMessage: Int) : CasesActionState
+}
+
 class CasesViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<CasesUiState>(CasesUiState.Loading)
     val uiState: StateFlow<CasesUiState> = _uiState.asStateFlow()
+
+    private val _actionState =
+        MutableStateFlow<CasesActionState>(CasesActionState.Success(false))
+    val actionState: StateFlow<CasesActionState> = _actionState.asStateFlow()
 
     init {
         getCases()
@@ -45,6 +61,36 @@ class CasesViewModel : ViewModel() {
             }
 
             _uiState.update { newUiState }
+        }
+    }
+
+    fun createCase(textMessage: String, caseId: String) {
+        _actionState.update { DetailsActionState.Loading }
+
+        viewModelScope.launch {
+            val newActionState = try {
+                val response = SheerAPI.retrofitService.createDetail(
+                    caseId,
+                    NewDetail(textMessage, ChatDirection.USER)
+                )
+                if (response.isSuccessful) {
+                    val responseBody = response.body()
+                    if (uiState.value is CasesActionState.Success && responseBody != null) {
+                        val currentMessagesList = (uiState.value as CasesActionState.Success).details
+                        currentMessagesList.add(responseBody)
+                        _uiState.update { CasesActionState.Success(currentMessagesList) }
+                    }
+                    CasesActionState.Success(true)
+                } else {
+                    CasesActionState.Error(R.string.create_message_error)
+                }
+            } catch (exception: IOException) {
+                CasesActionState.Error(R.string.create_message_error)
+            } catch (exception: HttpException) {
+                CasesActionState.Error(R.string.create_message_error)
+            }
+
+            _actionState.update { newActionState }
         }
     }
 }

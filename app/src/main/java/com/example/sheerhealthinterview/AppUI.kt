@@ -10,17 +10,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -66,12 +73,19 @@ fun AppUI(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentScreen = backStackEntry?.destination?.route?.split("/")?.get(0) ?: ""
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold(topBar = {
-        TopBar(currentScreenTitle = currentScreen,
-            canNavigateBack = navController.previousBackStackEntry != null,
-            navigateUp = { navController.navigateUp() })
-    }) { innerPadding ->
+    Scaffold(
+        topBar = {
+            TopBar(currentScreenTitle = currentScreen,
+                canNavigateBack = navController.previousBackStackEntry != null,
+                navigateUp = { navController.navigateUp() })
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        }
+    ) { innerPadding ->
+        val context = LocalContext.current
         NavHost(
             navController = navController,
             startDestination = AppScreen.Cases.name,
@@ -105,12 +119,19 @@ fun AppUI(modifier: Modifier = Modifier) {
                     )
                 }
             ) {
-                CasesScreen({ caseId: String -> navController.navigate("${AppScreen.Details.name}/$caseId") })
+                CasesScreen(
+                    caseClickedAction = { caseId: String -> navController.navigate("${AppScreen.Details.name}/$caseId") },
+                    errorAction = { errorMessageString ->
+                        snackbarHostState.showSnackbar(
+                            message = context.resources.getString(errorMessageString)
+                        )
+                    }
+                )
             }
 
             composable(
-                route = "${AppScreen.Details.name}/{caseId}",
-                arguments = listOf(navArgument("caseId") { type = NavType.StringType }),
+                route = "${AppScreen.Details.name}/{$CASE_ID_ARG}",
+                arguments = listOf(navArgument(CASE_ID_ARG) { type = NavType.StringType }),
                 enterTransition = {
                     slideIntoContainer(
                         AnimatedContentTransitionScope.SlideDirection.Left,
@@ -136,8 +157,15 @@ fun AppUI(modifier: Modifier = Modifier) {
                     )
                 }
             ) { backStackEntry ->
-                backStackEntry.arguments?.getString("caseId")?.let {
-                    DetailsScreen(it)
+                backStackEntry.arguments?.getString(CASE_ID_ARG)?.let { caseId ->
+                    DetailsScreen(
+                        caseId,
+                        { errorMessageString ->
+                            snackbarHostState.showSnackbar(
+                                message = context.resources.getString(errorMessageString)
+                            )
+                        }
+                    )
                 }
             }
         }
@@ -145,3 +173,4 @@ fun AppUI(modifier: Modifier = Modifier) {
 }
 
 private const val ANIMATION_DURATION = 500
+private const val CASE_ID_ARG = "caseId"
