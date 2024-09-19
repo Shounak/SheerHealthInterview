@@ -9,7 +9,7 @@ data class CaseDetails (
     val caseId: String,
     val timestamp: String,
     val status: CaseStatus,
-    val details: MutableList<Detail>
+    val details: MutableList<Detail> = mutableListOf()
 )
 
 @Serializable

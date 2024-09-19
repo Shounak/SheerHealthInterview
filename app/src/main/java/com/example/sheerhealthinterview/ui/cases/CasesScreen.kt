@@ -4,40 +4,44 @@ import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.RampRight
-import androidx.compose.material3.Card
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.sheerhealthinterview.AppScreen
 import com.example.sheerhealthinterview.R
 import com.example.sheerhealthinterview.network.Case
+import com.example.sheerhealthinterview.ui.ActionLoadingState
+import com.example.sheerhealthinterview.ui.ConfirmDeleteDialog
 import com.example.sheerhealthinterview.ui.ErrorState
 import com.example.sheerhealthinterview.ui.LoadingState
-import com.example.sheerhealthinterview.ui.details.DetailsActionState
+import com.example.sheerhealthinterview.ui.NewItemDialog
 import kotlinx.coroutines.launch
 
 @Composable
@@ -50,13 +54,18 @@ fun CasesScreen(
     val casesUiState by casesViewModel.uiState.collectAsStateWithLifecycle()
     val casesActionState by casesViewModel.actionState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    var caseIdToBeDeleted by rememberSaveable { mutableStateOf("") }
+    var showCrateCaseDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 text = { Text(text = stringResource(R.string.create_case)) },
                 icon = { Icon(Icons.Filled.Edit, stringResource(R.string.create_case)) },
-                onClick = {  })
+                onClick = {
+                    showCrateCaseDialog = true
+                })
         }
     ) { innerPadding ->
         when (casesUiState) {
@@ -75,6 +84,10 @@ fun CasesScreen(
                 CasesList(
                     (casesUiState as CasesUiState.Success).cases,
                     caseClickedAction,
+                    { caseId ->
+                        caseIdToBeDeleted = caseId
+                    },
+                    listState,
                     modifier.padding(innerPadding)
                 )
             }
@@ -89,8 +102,42 @@ fun CasesScreen(
                     }
                 }
             }
-            CasesActionState.Loading -> TODO()
-            is CasesActionState.Success -> TODO()
+
+            CasesActionState.Loading -> {
+                ActionLoadingState()
+            }
+
+            is CasesActionState.Success -> {
+                if ((casesActionState as CasesActionState.Success).scrollToBottom) {
+                    LaunchedEffect(Unit) {
+                        coroutineScope.launch {
+                            listState.scrollToItem(0)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (caseIdToBeDeleted.isNotEmpty()) {
+            ConfirmDeleteDialog(
+                dismissAction = { caseIdToBeDeleted = "" },
+                confirmAction = {
+                    casesViewModel.deleteCase(caseIdToBeDeleted)
+                    caseIdToBeDeleted = ""
+                },
+                dialogTitle = stringResource(R.string.delete_case_confirm)
+            )
+        }
+
+        if (showCrateCaseDialog) {
+            NewItemDialog(
+                dismissAction = { showCrateCaseDialog = false },
+                confirmAction = { caseTitle ->
+                    casesViewModel.createCase(caseTitle)
+                    showCrateCaseDialog = false
+                },
+                dialogTitle = stringResource(R.string.create_case)
+            )
         }
     }
 }
@@ -99,22 +146,34 @@ fun CasesScreen(
 private fun CasesList(
     casesList: List<Case>,
     clickAction: (String) -> Unit,
+    deleteAction: (String) -> Unit,
+    listState: LazyListState,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(modifier = modifier.fillMaxSize()) {
+    LazyColumn(modifier = modifier.fillMaxSize(), state = listState) {
         items(casesList.size) { index ->
+            val currentCase = casesList[index]
             CaseCard(
-                casesList[index],
+                currentCase,
                 clickAction,
+                deleteAction,
                 Modifier.padding(top = 20.dp, start = 10.dp, end = 10.dp)
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("InflateParams")
 @Composable
-private fun CaseCard(case: Case, clickAction: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun CaseCard(
+    case: Case,
+    clickAction: (String) -> Unit,
+    deleteAction: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptics = LocalHapticFeedback.current
+
     AndroidView(
         factory = { context ->
             val view = LayoutInflater.from(context).inflate(R.layout.case_cell, null, false)
@@ -127,7 +186,13 @@ private fun CaseCard(case: Case, clickAction: (String) -> Unit, modifier: Modifi
         },
         modifier = modifier
             .fillMaxWidth()
-            .clickable { clickAction(case.caseId) }
+            .combinedClickable(
+                onClick = { clickAction(case.caseId) },
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    deleteAction(case.caseId)
+                },
+                onLongClickLabel = stringResource(R.string.delete_case_confirm)
+            )
     )
 }
-

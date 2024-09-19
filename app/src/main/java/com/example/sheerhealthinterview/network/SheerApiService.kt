@@ -6,6 +6,7 @@ import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import retrofit2.Converter
 import retrofit2.Retrofit
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -27,9 +28,19 @@ object SheerAPI {
 
     private val retrofit = Retrofit.Builder()
         .client(okhttpClient())
-        .addConverterFactory(Json.asConverterFactory("application/json".toMediaType()))
+        .addConverterFactory(generateConverterFactory())
         .baseUrl(BASE_URL)
         .build()
+
+    private fun generateConverterFactory(): Converter.Factory {
+        val json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
+
+        val contentType = "application/json".toMediaType()
+        return json.asConverterFactory(contentType)
+    }
 
     val retrofitService: SheerApiService by lazy {
         retrofit.create(SheerApiService::class.java)
@@ -47,7 +58,13 @@ private class AuthInterceptor : Interceptor {
 
 interface SheerApiService {
     @GET("case")
-    suspend fun getCases(): retrofit2.Response<List<Case>>
+    suspend fun getCases(): retrofit2.Response<MutableList<Case>>
+
+    @POST("case")
+    suspend fun createCase(@Body newCase: NewCase): retrofit2.Response<Case>
+
+    @DELETE("case/{caseId}")
+    suspend fun deleteCase(@Path("caseId") caseId: String): retrofit2.Response<String>
 
     @GET("case/{caseId}")
     suspend fun getDetails(@Path("caseId") caseId: String): retrofit2.Response<CaseDetails>

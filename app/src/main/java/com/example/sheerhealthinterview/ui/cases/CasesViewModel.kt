@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sheerhealthinterview.R
 import com.example.sheerhealthinterview.network.Case
+import com.example.sheerhealthinterview.network.CaseStatus
 import com.example.sheerhealthinterview.network.ChatDirection
+import com.example.sheerhealthinterview.network.NewCase
 import com.example.sheerhealthinterview.network.NewDetail
 import com.example.sheerhealthinterview.network.SheerAPI
 import com.example.sheerhealthinterview.ui.details.DetailsActionState
@@ -19,7 +21,7 @@ import retrofit2.HttpException
 import java.io.IOException
 
 sealed interface CasesUiState {
-    data class Success(val cases: List<Case>): CasesUiState
+    data class Success(val cases: MutableList<Case>): CasesUiState
     data object Loading: CasesUiState
     data object Error: CasesUiState
 }
@@ -64,30 +66,55 @@ class CasesViewModel : ViewModel() {
         }
     }
 
-    fun createCase(textMessage: String, caseId: String) {
-        _actionState.update { DetailsActionState.Loading }
+    fun createCase(caseTitle: String) {
+        _actionState.update { CasesActionState.Loading }
 
         viewModelScope.launch {
             val newActionState = try {
-                val response = SheerAPI.retrofitService.createDetail(
-                    caseId,
-                    NewDetail(textMessage, ChatDirection.USER)
+                val response = SheerAPI.retrofitService.createCase(
+                    NewCase(caseTitle, CaseStatus.WAITING_ON_TEAM)
                 )
                 if (response.isSuccessful) {
                     val responseBody = response.body()
-                    if (uiState.value is CasesActionState.Success && responseBody != null) {
-                        val currentMessagesList = (uiState.value as CasesActionState.Success).details
+                    if (uiState.value is CasesUiState.Success && responseBody != null) {
+                        val currentMessagesList = (uiState.value as CasesUiState.Success).cases
                         currentMessagesList.add(responseBody)
-                        _uiState.update { CasesActionState.Success(currentMessagesList) }
+                        _uiState.update { CasesUiState.Success(currentMessagesList) }
                     }
                     CasesActionState.Success(true)
                 } else {
-                    CasesActionState.Error(R.string.create_message_error)
+                    CasesActionState.Error(R.string.create_case_error)
                 }
             } catch (exception: IOException) {
-                CasesActionState.Error(R.string.create_message_error)
+                CasesActionState.Error(R.string.create_case_error)
             } catch (exception: HttpException) {
-                CasesActionState.Error(R.string.create_message_error)
+                CasesActionState.Error(R.string.create_case_error)
+            }
+
+            _actionState.update { newActionState }
+        }
+    }
+
+    fun deleteCase(caseId: String) {
+        _actionState.update { CasesActionState.Loading }
+
+        viewModelScope.launch {
+            val newActionState = try {
+                val response = SheerAPI.retrofitService.deleteCase(caseId)
+                if (response.isSuccessful) {
+                    if (uiState.value is CasesUiState.Success) {
+                        val currentCasesList = (uiState.value as CasesUiState.Success).cases
+                        currentCasesList.removeIf { it.caseId == caseId }
+                        _uiState.update { CasesUiState.Success(currentCasesList) }
+                    }
+                    CasesActionState.Success(false)
+                } else {
+                    CasesActionState.Error(R.string.delete_case_error)
+                }
+            } catch (exception: IOException) {
+                CasesActionState.Error(R.string.delete_case_error)
+            } catch (exception: HttpException) {
+                CasesActionState.Error(R.string.delete_case_error)
             }
 
             _actionState.update { newActionState }

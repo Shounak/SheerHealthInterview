@@ -87,7 +87,7 @@ fun DetailsScreen(
     val detailsActionState by detailsViewModel.actionState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-    var detailIdToBeDeleted by remember { mutableStateOf("") }
+    var detailIdToBeDeleted by rememberSaveable { mutableStateOf("") }
 
     when (detailsUiState) {
         DetailsUiState.Error -> {
@@ -139,8 +139,8 @@ fun DetailsScreen(
 
     if (detailIdToBeDeleted.isNotEmpty()) {
         ConfirmDeleteDialog(
-            onDismissRequest = { detailIdToBeDeleted = "" },
-            onConfirmation = {
+            dismissAction = { detailIdToBeDeleted = "" },
+            confirmAction = {
                 detailsViewModel.deleteMessage(caseId, detailIdToBeDeleted)
                 detailIdToBeDeleted = ""
             },
@@ -247,7 +247,14 @@ private fun ChatCard(chat: Detail, deleteAction: (String) -> Unit, modifier: Mod
                 modifier = modifier
                     .padding(start = 50.dp)
                     .fillMaxWidth()
-                    .clickable { deleteAction(chat.detailId) }
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            deleteAction(chat.detailId)
+                        },
+                        onLongClickLabel = stringResource(R.string.delete_message)
+                    )
             )
         }
     }

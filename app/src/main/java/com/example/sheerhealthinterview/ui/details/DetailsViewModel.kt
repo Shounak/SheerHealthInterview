@@ -39,7 +39,7 @@ class DetailsViewModelFactory(private val caseId: String) : ViewModelProvider.Fa
     }
 }
 
-class DetailsViewModel(caseId: String, ) : ViewModel() {
+class DetailsViewModel(caseId: String) : ViewModel() {
     private val _uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
 
@@ -82,9 +82,7 @@ class DetailsViewModel(caseId: String, ) : ViewModel() {
                 if (response.isSuccessful) {
                     if (uiState.value is DetailsUiState.Success) {
                         val currentMessagesList = (uiState.value as DetailsUiState.Success).details
-                        currentMessagesList.removeIf {
-                            it.detailId == detailId
-                        }
+                        currentMessagesList.removeIf { it.detailId == detailId }
                         _uiState.update { DetailsUiState.Success(currentMessagesList) }
                     }
                     DetailsActionState.Success(false)

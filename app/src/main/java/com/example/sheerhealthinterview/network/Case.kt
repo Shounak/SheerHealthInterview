@@ -14,6 +14,12 @@ data class Case (
 )
 
 @Serializable
+data class NewCase (
+    val title: String,
+    val status: CaseStatus
+)
+
+@Serializable
 enum class CaseStatus(@DrawableRes val icon: Int) {
     @SerialName("WAITING_ON_USER")
     WAITING_ON_USER(R.drawable.round_person_24),

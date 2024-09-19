@@ -1,5 +1,8 @@
 package com.example.sheerhealthinterview.ui
 
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +16,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -44,8 +52,8 @@ fun ErrorState(retryAction: () -> Unit, modifier: Modifier = Modifier) {
 
 @Composable
 fun ConfirmDeleteDialog(
-    onDismissRequest: () -> Unit,
-    onConfirmation: () -> Unit,
+    dismissAction: () -> Unit,
+    confirmAction: () -> Unit,
     dialogTitle: String,
 ) {
     AlertDialog(
@@ -53,12 +61,12 @@ fun ConfirmDeleteDialog(
             Text(text = dialogTitle)
         },
         onDismissRequest = {
-            onDismissRequest()
+            dismissAction()
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfirmation()
+                    confirmAction()
                 }
             ) {
                 Text(stringResource(R.string.confirm))
@@ -67,11 +75,60 @@ fun ConfirmDeleteDialog(
         dismissButton = {
             TextButton(
                 onClick = {
-                    onDismissRequest()
+                    dismissAction()
                 }
             ) {
                 Text(stringResource(R.string.dismiss))
             }
+        }
+    )
+}
+
+@Composable
+fun NewItemDialog(
+    dismissAction: () -> Unit,
+    confirmAction: (String) -> Unit,
+    dialogTitle: String,
+) {
+    var input by rememberSaveable { mutableStateOf("") }
+
+    AlertDialog(
+        title = {
+            Text(text = dialogTitle)
+        },
+        onDismissRequest = {
+            dismissAction()
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    confirmAction(input)
+                }
+            ) {
+                Text(stringResource(R.string.create_case))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    dismissAction()
+                }
+            ) {
+                Text(stringResource(R.string.dismiss))
+            }
+        },
+        text = {
+            TextField(modifier = Modifier.scrollable(
+                orientation = Orientation.Vertical,
+                state = rememberScrollableState { delta -> delta }),
+                value = input,
+                placeholder = {
+                    Text(stringResource(R.string.new_case_title))
+                },
+                onValueChange = {
+                    input = it
+                }
+            )
         }
     )
 }
