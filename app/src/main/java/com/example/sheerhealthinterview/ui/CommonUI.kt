@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -24,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.sheerhealthinterview.R
@@ -44,7 +46,14 @@ fun ErrorState(retryAction: () -> Unit, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Center
     ) {
         Text("Error")
-        Button(onClick = retryAction, modifier = modifier.padding(top = 20.dp)) {
+        Button(
+            onClick = retryAction,
+            modifier = modifier.padding(top = 20.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Purple40,
+                contentColor = Color.White
+            )
+        ) {
             Text(text = "Retry")
         }
     }
@@ -80,55 +89,6 @@ fun ConfirmDeleteDialog(
             ) {
                 Text(stringResource(R.string.dismiss))
             }
-        }
-    )
-}
-
-@Composable
-fun NewItemDialog(
-    dismissAction: () -> Unit,
-    confirmAction: (String) -> Unit,
-    dialogTitle: String,
-) {
-    var input by rememberSaveable { mutableStateOf("") }
-
-    AlertDialog(
-        title = {
-            Text(text = dialogTitle)
-        },
-        onDismissRequest = {
-            dismissAction()
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    confirmAction(input)
-                }
-            ) {
-                Text(stringResource(R.string.create_case))
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
-                    dismissAction()
-                }
-            ) {
-                Text(stringResource(R.string.dismiss))
-            }
-        },
-        text = {
-            TextField(modifier = Modifier.scrollable(
-                orientation = Orientation.Vertical,
-                state = rememberScrollableState { delta -> delta }),
-                value = input,
-                placeholder = {
-                    Text(stringResource(R.string.new_case_title))
-                },
-                onValueChange = {
-                    input = it
-                }
-            )
         }
     )
 }

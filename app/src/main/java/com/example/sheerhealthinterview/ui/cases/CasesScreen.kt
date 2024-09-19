@@ -5,8 +5,13 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,26 +20,36 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -45,21 +60,22 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sheerhealthinterview.R
 import com.example.sheerhealthinterview.network.Case
 import com.example.sheerhealthinterview.ui.ActionLoadingState
 import com.example.sheerhealthinterview.ui.ConfirmDeleteDialog
 import com.example.sheerhealthinterview.ui.ErrorState
 import com.example.sheerhealthinterview.ui.LoadingState
-import com.example.sheerhealthinterview.ui.NewItemDialog
 import kotlinx.coroutines.launch
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.example.sheerhealthinterview.network.CaseStatus
+import com.example.sheerhealthinterview.network.SheerAPI
+import com.example.sheerhealthinterview.ui.theme.Purple40
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -69,14 +85,21 @@ fun CasesScreen(
     caseClickedAction: (String) -> Unit,
     errorAction: suspend (Int) -> Unit,
     modifier: Modifier = Modifier,
-    casesViewModel: CasesViewModel = viewModel()
 ) {
+    val viewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
+        "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
+    }
+    val casesViewModel: CasesViewModel = ViewModelProvider(
+        viewModelStoreOwner,
+        CasesViewModelFactory(SheerAPI.retrofitService)
+    ).get(CasesViewModel::class.java)
+
     val casesUiState by casesViewModel.uiState.collectAsStateWithLifecycle()
     val casesActionState by casesViewModel.actionState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     var caseIdToBeDeleted by rememberSaveable { mutableStateOf("") }
-    var showCrateCaseDialog by rememberSaveable { mutableStateOf(false) }
+    var showCreateCaseDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -84,7 +107,7 @@ fun CasesScreen(
                 text = { Text(text = stringResource(R.string.create_case)) },
                 icon = { Icon(Icons.Filled.Edit, stringResource(R.string.create_case)) },
                 onClick = {
-                    showCrateCaseDialog = true
+                    showCreateCaseDialog = true
                 })
         }
     ) { innerPadding ->
@@ -149,19 +172,19 @@ fun CasesScreen(
             )
         }
 
-        if (showCrateCaseDialog) {
+        if (showCreateCaseDialog) {
             NewItemDialog(
-                dismissAction = { showCrateCaseDialog = false },
-                confirmAction = { caseTitle ->
-                    casesViewModel.createCase(caseTitle)
-                    showCrateCaseDialog = false
-                },
-                dialogTitle = stringResource(R.string.create_case)
+                dismissAction = { showCreateCaseDialog = false },
+                confirmAction = { newCase ->
+                    casesViewModel.createCase(newCase.first, newCase.second)
+                    showCreateCaseDialog = false
+                }
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CasesList(
     casesList: List<Case>,
@@ -170,17 +193,41 @@ private fun CasesList(
     listState: LazyListState,
     modifier: Modifier = Modifier
 ) {
+    var searchText by rememberSaveable { mutableStateOf("") }
+    val visibleItems = rememberSaveable { mutableStateOf(casesList) }
+
     LazyColumn(modifier = modifier.fillMaxSize(), state = listState) {
+        stickyHeader {
+            TextField(
+                value = searchText,
+                onValueChange = {
+                    searchText = it
+                    visibleItems.value = casesList.filter { case ->
+                        case.title.contains(searchText, ignoreCase = true)
+                    }
+                },
+                placeholder = {
+                    Text(stringResource(R.string.search_cases))
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(R.string.search_cases)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         item {
             LongPressMessage()
         }
-        items(casesList.size) { index ->
-            val currentCase = casesList[index]
+        items(visibleItems.value.size) { index ->
+            val currentCase = visibleItems.value[index]
             CaseCard(
                 currentCase,
                 clickAction,
                 deleteAction,
-                Modifier.padding(top = 20.dp, start = 10.dp, end = 10.dp)
+                Modifier.padding(10.dp)
             )
         }
     }
@@ -207,13 +254,17 @@ fun LongPressMessage(modifier: Modifier = Modifier) {
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(10.dp)
+                .padding(10.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Purple40
+            )
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.long_press_message),
                     modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = Color.White
                 )
                 IconButton(onClick = {
                     coroutineScope.launch {
@@ -224,7 +275,8 @@ fun LongPressMessage(modifier: Modifier = Modifier) {
                 }) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.long_press_message_hide)
+                        contentDescription = stringResource(R.string.long_press_message_hide),
+                        tint = Color.White
                     )
                 }
             }
@@ -253,6 +305,18 @@ private fun CaseCard(
 
             view // return the view
         },
+        update = { view ->
+            val textView = view.findViewById<TextView>(R.id.case_title)
+            val iconView = view.findViewById<ImageView>(R.id.status_icon)
+            textView.text = case.title
+            iconView.setImageResource(case.status.icon)
+        },
+        onReset = { view ->
+            val textView = view.findViewById<TextView>(R.id.case_title)
+            val iconView = view.findViewById<ImageView>(R.id.status_icon)
+            textView.text = null
+            iconView.setImageResource(R.drawable.round_person_24)
+        },
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
@@ -264,4 +328,90 @@ private fun CaseCard(
                 onLongClickLabel = stringResource(R.string.delete_case_confirm)
             )
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NewItemDialog(
+    dismissAction: () -> Unit,
+    confirmAction: (Pair<String, CaseStatus>) -> Unit
+) {
+    var input by rememberSaveable { mutableStateOf("") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    var selectedStatus by remember { mutableStateOf(CaseStatus.WAITING_ON_TEAM) }
+    val focusRequester = FocusRequester()
+
+    AlertDialog(
+        title = {
+            Text(text = stringResource(R.string.create_case))
+        },
+        onDismissRequest = {
+            dismissAction()
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    confirmAction(Pair(input, selectedStatus))
+                }
+            ) {
+                Text(stringResource(R.string.create_case))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    dismissAction()
+                }
+            ) {
+                Text(stringResource(R.string.dismiss))
+            }
+        },
+        text = {
+            Column {
+                TextField(
+                    modifier = Modifier.scrollable(
+                        orientation = Orientation.Vertical,
+                        state = rememberScrollableState { delta -> delta })
+                        .padding(bottom = 20.dp)
+                        .focusRequester(focusRequester),
+                    value = input,
+                    placeholder = {
+                        Text(stringResource(R.string.new_case_title))
+                    },
+                    onValueChange = {
+                        input = it
+                    }
+                )
+                ExposedDropdownMenuBox(
+                    expanded = dropdownExpanded,
+                    onExpandedChange = { dropdownExpanded = !dropdownExpanded }) {
+                    TextField(
+                        value = selectedStatus.title,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                        modifier = Modifier.menuAnchor()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false }
+                    ) {
+                        CaseStatus.entries.forEach { status ->
+                            DropdownMenuItem(
+                                text = { Text(text = status.title) },
+                                onClick = {
+                                    selectedStatus = status
+                                    dropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    )
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 }

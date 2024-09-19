@@ -5,11 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.sheerhealthinterview.R
-import com.example.sheerhealthinterview.network.CaseDetails
 import com.example.sheerhealthinterview.network.ChatDirection
 import com.example.sheerhealthinterview.network.Detail
 import com.example.sheerhealthinterview.network.NewDetail
-import com.example.sheerhealthinterview.network.SheerAPI
+import com.example.sheerhealthinterview.network.SheerApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,16 +29,16 @@ sealed interface DetailsActionState {
     data class Error(@StringRes val errorMessage: Int) : DetailsActionState
 }
 
-class DetailsViewModelFactory(private val caseId: String) : ViewModelProvider.Factory {
+class DetailsViewModelFactory(private val caseId: String, private val apiService: SheerApiService) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DetailsViewModel::class.java)) {
-            return DetailsViewModel(caseId) as T
+            return DetailsViewModel(caseId, apiService) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 
-class DetailsViewModel(caseId: String) : ViewModel() {
+class DetailsViewModel(caseId: String, private val apiService: SheerApiService) : ViewModel() {
     private val _uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
 
@@ -56,7 +55,7 @@ class DetailsViewModel(caseId: String) : ViewModel() {
 
         viewModelScope.launch {
             val newUiState = try {
-                val response = SheerAPI.retrofitService.getDetails(caseId)
+                val response = apiService.getDetails(caseId)
                 val responseBody = response.body()
                 if (response.isSuccessful && responseBody != null) {
                     DetailsUiState.Success(responseBody.details)
@@ -78,7 +77,7 @@ class DetailsViewModel(caseId: String) : ViewModel() {
 
         viewModelScope.launch {
             val newActionState = try {
-                val response = SheerAPI.retrofitService.deleteDetail(caseId, detailId)
+                val response = apiService.deleteDetail(caseId, detailId)
                 if (response.isSuccessful) {
                     if (uiState.value is DetailsUiState.Success) {
                         val currentMessagesList = (uiState.value as DetailsUiState.Success).details
@@ -104,7 +103,7 @@ class DetailsViewModel(caseId: String) : ViewModel() {
 
         viewModelScope.launch {
             val newActionState = try {
-                val response = SheerAPI.retrofitService.createDetail(
+                val response = apiService.createDetail(
                     caseId,
                     NewDetail(textMessage, ChatDirection.USER)
                 )

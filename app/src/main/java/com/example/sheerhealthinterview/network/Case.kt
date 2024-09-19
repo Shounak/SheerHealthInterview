@@ -20,13 +20,13 @@ data class NewCase (
 )
 
 @Serializable
-enum class CaseStatus(@DrawableRes val icon: Int) {
+enum class CaseStatus(@DrawableRes val icon: Int, val title: String) {
     @SerialName("WAITING_ON_USER")
-    WAITING_ON_USER(R.drawable.round_person_24),
+    WAITING_ON_USER(R.drawable.round_person_24, "Waiting on user"),
 
     @SerialName("WAITING_ON_TEAM")
-    WAITING_ON_TEAM(R.drawable.baseline_hourglass_bottom_24),
+    WAITING_ON_TEAM(R.drawable.baseline_hourglass_bottom_24, "Waiting on team"),
 
     @SerialName("COMPLETE")
-    COMPLETE(R.drawable.baseline_check_circle_24)
+    COMPLETE(R.drawable.baseline_check_circle_24, "Complete")
 }

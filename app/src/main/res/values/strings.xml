@@ -18,4 +18,5 @@
     <string name="new_case_title">New case title</string>
     <string name="long_press_message">Long press an item to delete it</string>
     <string name="long_press_message_hide">Hide message</string>
+    <string name="search_cases">Search cases</string>
 </resources>

@@ -63,6 +63,7 @@ import com.example.sheerhealthinterview.R
 import com.example.sheerhealthinterview.network.CaseDetails
 import com.example.sheerhealthinterview.network.ChatDirection
 import com.example.sheerhealthinterview.network.Detail
+import com.example.sheerhealthinterview.network.SheerAPI
 import com.example.sheerhealthinterview.ui.ActionLoadingState
 import com.example.sheerhealthinterview.ui.ConfirmDeleteDialog
 import com.example.sheerhealthinterview.ui.ErrorState
@@ -80,7 +81,7 @@ fun DetailsScreen(
     }
     val detailsViewModel: DetailsViewModel = ViewModelProvider(
         viewModelStoreOwner,
-        DetailsViewModelFactory(caseId)
+        DetailsViewModelFactory(caseId, SheerAPI.retrofitService)
     ).get(DetailsViewModel::class.java)
 
     val detailsUiState by detailsViewModel.uiState.collectAsStateWithLifecycle()

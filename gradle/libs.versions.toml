@@ -16,9 +16,11 @@ runtimeCompose = "2.8.5"
 navigation = "2.8.0"
 cardview = "1.0.0"
 datastore = "1.1.1"
+kotlinxCorountinesTest = "1.8.1"
 
 
 [libraries]
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version = "kotlinxCoroutinesTest"}
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

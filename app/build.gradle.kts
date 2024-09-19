@@ -51,7 +51,7 @@ android {
 }
 
 dependencies {
-
+    testImplementation(libs.kotlinx.coroutines.test)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -77,4 +77,7 @@ dependencies {
     implementation(libs.navigation)
     implementation(libs.cardview)
     implementation(libs.datastore)
+    androidTestImplementation ("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.1") {
+        exclude ("org.jetbrains.kotlinx", "kotlinx-coroutines-debug")
+    }
 }

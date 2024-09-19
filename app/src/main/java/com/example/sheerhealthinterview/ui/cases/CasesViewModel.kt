@@ -2,16 +2,13 @@ package com.example.sheerhealthinterview.ui.cases
 
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.sheerhealthinterview.R
 import com.example.sheerhealthinterview.network.Case
 import com.example.sheerhealthinterview.network.CaseStatus
-import com.example.sheerhealthinterview.network.ChatDirection
 import com.example.sheerhealthinterview.network.NewCase
-import com.example.sheerhealthinterview.network.NewDetail
-import com.example.sheerhealthinterview.network.SheerAPI
-import com.example.sheerhealthinterview.ui.details.DetailsActionState
-import com.example.sheerhealthinterview.ui.details.DetailsUiState
+import com.example.sheerhealthinterview.network.SheerApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +29,16 @@ sealed interface CasesActionState {
     data class Error(@StringRes val errorMessage: Int) : CasesActionState
 }
 
-class CasesViewModel : ViewModel() {
+class CasesViewModelFactory(private val apiService: SheerApiService) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(CasesViewModel::class.java)) {
+            return CasesViewModel(apiService) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class CasesViewModel(private val apiService: SheerApiService) : ViewModel() {
     private val _uiState = MutableStateFlow<CasesUiState>(CasesUiState.Loading)
     val uiState: StateFlow<CasesUiState> = _uiState.asStateFlow()
 
@@ -49,7 +55,7 @@ class CasesViewModel : ViewModel() {
 
         viewModelScope.launch {
             val newUiState = try {
-                val response = SheerAPI.retrofitService.getCases()
+                val response = apiService.getCases()
                 val responseBody = response.body()
                 if (response.isSuccessful && responseBody != null) {
                     CasesUiState.Success(responseBody)
@@ -66,13 +72,13 @@ class CasesViewModel : ViewModel() {
         }
     }
 
-    fun createCase(caseTitle: String) {
+    fun createCase(caseTitle: String, caseStatus: CaseStatus) {
         _actionState.update { CasesActionState.Loading }
 
         viewModelScope.launch {
             val newActionState = try {
-                val response = SheerAPI.retrofitService.createCase(
-                    NewCase(caseTitle, CaseStatus.WAITING_ON_TEAM)
+                val response = apiService.createCase(
+                    NewCase(caseTitle, caseStatus)
                 )
                 if (response.isSuccessful) {
                     val responseBody = response.body()
@@ -100,7 +106,7 @@ class CasesViewModel : ViewModel() {
 
         viewModelScope.launch {
             val newActionState = try {
-                val response = SheerAPI.retrofitService.deleteCase(caseId)
+                val response = apiService.deleteCase(caseId)
                 if (response.isSuccessful) {
                     if (uiState.value is CasesUiState.Success) {
                         val currentCasesList = (uiState.value as CasesUiState.Success).cases
