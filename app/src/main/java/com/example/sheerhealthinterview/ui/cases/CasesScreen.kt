@@ -1,11 +1,13 @@
 package com.example.sheerhealthinterview.ui.cases
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.view.LayoutInflater
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,10 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,12 +33,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sheerhealthinterview.R
@@ -43,6 +54,15 @@ import com.example.sheerhealthinterview.ui.ErrorState
 import com.example.sheerhealthinterview.ui.LoadingState
 import com.example.sheerhealthinterview.ui.NewItemDialog
 import kotlinx.coroutines.launch
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Composable
 fun CasesScreen(
@@ -151,6 +171,9 @@ private fun CasesList(
     modifier: Modifier = Modifier
 ) {
     LazyColumn(modifier = modifier.fillMaxSize(), state = listState) {
+        item {
+            LongPressMessage()
+        }
         items(casesList.size) { index ->
             val currentCase = casesList[index]
             CaseCard(
@@ -159,6 +182,52 @@ private fun CasesList(
                 deleteAction,
                 Modifier.padding(top = 20.dp, start = 10.dp, end = 10.dp)
             )
+        }
+    }
+}
+
+@Composable
+fun LongPressMessage(modifier: Modifier = Modifier) {
+    val datastore = LocalContext.current.dataStore
+    val coroutineScope = rememberCoroutineScope()
+    val SHOW_LONG_PRESS_MESSAGE = intPreferencesKey("SHOW_LONG_PRESS_MESSAGE")
+
+    /**
+     * Datastore works best with Ints
+     * 0 to show message
+     * 1 to not show message
+     */
+    val showMessageValueFlow: Flow<Int> = datastore.data
+        .map { preferences ->
+            preferences[SHOW_LONG_PRESS_MESSAGE] ?: 0
+        }
+    val showMessage by showMessageValueFlow.collectAsStateWithLifecycle(1)
+
+    if (showMessage == 0) {
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.long_press_message),
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
+                IconButton(onClick = {
+                    coroutineScope.launch {
+                        datastore.edit { preferences ->
+                            preferences[SHOW_LONG_PRESS_MESSAGE] = 1
+                        }
+                    }
+                }) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.long_press_message_hide)
+                    )
+                }
+            }
         }
     }
 }

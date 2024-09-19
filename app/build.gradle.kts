@@ -76,4 +76,5 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.navigation)
     implementation(libs.cardview)
+    implementation(libs.datastore)
 }
