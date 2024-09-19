@@ -72,16 +72,13 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun DetailsScreen(
-    caseId: String,
-    errorAction: suspend (Int) -> Unit,
-    modifier: Modifier = Modifier
+    caseId: String, errorAction: suspend (Int) -> Unit, modifier: Modifier = Modifier
 ) {
     val viewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
         "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
     }
     val detailsViewModel: DetailsViewModel = ViewModelProvider(
-        viewModelStoreOwner,
-        DetailsViewModelFactory(caseId, SheerAPI.retrofitService)
+        viewModelStoreOwner, DetailsViewModelFactory(caseId, SheerAPI.retrofitService)
     ).get(DetailsViewModel::class.java)
 
     val detailsUiState by detailsViewModel.uiState.collectAsStateWithLifecycle()
@@ -100,15 +97,11 @@ fun DetailsScreen(
         }
 
         is DetailsUiState.Success -> {
-            CaseDetails(
-                (detailsUiState as DetailsUiState.Success).details,
-                { detailId ->
-                    detailIdToBeDeleted = detailId
-                },
-                { textMessage ->
-                    detailsViewModel.sendMessage(textMessage, caseId)
-                },
-                listState
+            CaseDetails((detailsUiState as DetailsUiState.Success).details, { detailId ->
+                detailIdToBeDeleted = detailId
+            }, { textMessage ->
+                detailsViewModel.sendMessage(textMessage, caseId)
+            }, listState
             )
         }
     }
@@ -139,13 +132,10 @@ fun DetailsScreen(
     }
 
     if (detailIdToBeDeleted.isNotEmpty()) {
-        ConfirmDeleteDialog(
-            dismissAction = { detailIdToBeDeleted = "" },
-            confirmAction = {
-                detailsViewModel.deleteMessage(caseId, detailIdToBeDeleted)
-                detailIdToBeDeleted = ""
-            },
-            dialogTitle = stringResource(R.string.delete_message_confirm)
+        ConfirmDeleteDialog(dismissAction = { detailIdToBeDeleted = "" }, confirmAction = {
+            detailsViewModel.deleteMessage(caseId, detailIdToBeDeleted)
+            detailIdToBeDeleted = ""
+        }, dialogTitle = stringResource(R.string.delete_message_confirm)
         )
     }
 }
@@ -168,15 +158,12 @@ private fun CaseDetails(
             LazyColumn(
                 Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(),
-                reverseLayout = true,
-                state = listState
+                    .fillMaxHeight(), reverseLayout = true, state = listState
             ) {
                 items(caseDetails.size) { index ->
                     ChatCard(
                         caseDetails[caseDetails.size - 1 - index], // render items in reverse order (latest at bottom)
-                        deleteAction,
-                        Modifier.padding(10.dp)
+                        deleteAction, Modifier.padding(10.dp)
                     )
                 }
             }
@@ -194,16 +181,14 @@ private fun ChatCard(chat: Detail, deleteAction: (String) -> Unit, modifier: Mod
 
     when (chat.direction) {
         ChatDirection.TEAM -> {
-            AndroidView(
-                factory = { context ->
-                    val view =
-                        LayoutInflater.from(context)
-                            .inflate(R.layout.team_message_cell, null, false)
-                    val textView = view.findViewById<TextView>(R.id.message_text)
-                    textView.text = chat.message
+            AndroidView(factory = { context ->
+                val view = LayoutInflater.from(context)
+                    .inflate(R.layout.team_message_cell, null, false)
+                val textView = view.findViewById<TextView>(R.id.message_text)
+                textView.text = chat.message
 
-                    view // return the view
-                },
+                view // return the view
+            },
                 update = { view ->
                     val textView = view.findViewById<TextView>(R.id.message_text)
                     textView.text = chat.message
@@ -215,28 +200,23 @@ private fun ChatCard(chat: Detail, deleteAction: (String) -> Unit, modifier: Mod
                 modifier = modifier
                     .padding(end = 50.dp)
                     .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = {},
-                        onLongClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            deleteAction(chat.detailId)
-                        },
-                        onLongClickLabel = stringResource(R.string.delete_message)
+                    .combinedClickable(onClick = {}, onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        deleteAction(chat.detailId)
+                    }, onLongClickLabel = stringResource(R.string.delete_message)
                     )
             )
         }
 
         ChatDirection.USER -> {
-            AndroidView(
-                factory = { context ->
-                    val view =
-                        LayoutInflater.from(context)
-                            .inflate(R.layout.user_message_cell, null, false)
-                    val textView = view.findViewById<TextView>(R.id.message_text)
-                    textView.text = chat.message
+            AndroidView(factory = { context ->
+                val view = LayoutInflater.from(context)
+                    .inflate(R.layout.user_message_cell, null, false)
+                val textView = view.findViewById<TextView>(R.id.message_text)
+                textView.text = chat.message
 
-                    view // return the view
-                },
+                view // return the view
+            },
                 update = { view ->
                     val textView = view.findViewById<TextView>(R.id.message_text)
                     textView.text = chat.message
@@ -248,13 +228,10 @@ private fun ChatCard(chat: Detail, deleteAction: (String) -> Unit, modifier: Mod
                 modifier = modifier
                     .padding(start = 50.dp)
                     .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = {},
-                        onLongClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            deleteAction(chat.detailId)
-                        },
-                        onLongClickLabel = stringResource(R.string.delete_message)
+                    .combinedClickable(onClick = {}, onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        deleteAction(chat.detailId)
+                    }, onLongClickLabel = stringResource(R.string.delete_message)
                     )
             )
         }
@@ -266,8 +243,7 @@ private fun ComposeMessageBar(sendAction: (String) -> Unit, modifier: Modifier =
     var messageText by rememberSaveable { mutableStateOf("") }
 
     Row(
-        modifier = modifier, //.padding(top = 20.dp),
-        verticalAlignment = Alignment.Bottom
+        modifier = modifier, verticalAlignment = Alignment.Bottom
     ) {
         Spacer(modifier = Modifier.width(5.dp))
 
@@ -277,15 +253,12 @@ private fun ComposeMessageBar(sendAction: (String) -> Unit, modifier: Modifier =
                 .weight(1f)
                 .border(1.dp, Color.LightGray, CircleShape),
         ) {
-            TextField(
-                maxLines = 2,
+            TextField(maxLines = 2,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .scrollable(
-                        orientation = Orientation.Vertical,
-                        state = rememberScrollableState { delta -> delta }
-                    ),
+                    .scrollable(orientation = Orientation.Vertical,
+                        state = rememberScrollableState { delta -> delta }),
                 value = messageText,
                 placeholder = {
                     Text(stringResource(R.string.text_message))
@@ -308,6 +281,7 @@ private fun ComposeMessageBar(sendAction: (String) -> Unit, modifier: Modifier =
                     sendAction(messageText)
                     messageText = ""
                 },
+                enabled = messageText.isNotEmpty()
             ) {
                 Icon(
                     imageVector = Icons.Default.Send,
